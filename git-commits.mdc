@@ -1,0 +1,12 @@
+---
+description: Git commit message standards — English only, concise why-focused messages, zero AI/tool co-author trailers
+alwaysApply: true
+---
+
+# Git Commits
+
+When creating commits for any repository:
+
+- **NEVER** add `Co-authored-by: Cursor <cursoragent@cursor.com>` or any AI/agent/tool co-author trailer (Cursor, Copilot, Claude, Gemini, Antigravity, etc.) to the commit message subject or body.
+- Write only the project's commit message in **English** — concise, clear, focused on **why**, and following existing repository style.
+- Do not append tool or agent attribution lines unless the user explicitly asks for them.

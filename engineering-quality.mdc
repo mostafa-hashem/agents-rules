@@ -1,0 +1,94 @@
+---
+description: Universal engineering craftsmanship, analyzer/linter hygiene, async & lifecycle safety, lazy initialization, and terminal conventions
+alwaysApply: true
+---
+
+# Engineering Quality
+
+Cross-cutting engineering standards applicable to every language, framework, backend, and database. Design/UI: **`mandatory-design.mdc`**. Data/sync/crypto: **`data-sync-and-security.mdc`**.
+
+---
+
+## Problem-Solving Focus
+
+- **Craftsmanship:** Precise, polished behavior with **minimal focused diffs**. Reuse existing project patterns and utilities over one-off hacks.
+- **Simplicity:** Simplest solution that works. Do not add parallel state, duplicate listeners, or extra wrappers when a built-in or existing pattern covers the case.
+- **Do not overcomplicate layout/insets:** Before stacking `resizeToAvoidBottomInset`, manual `viewInsets`, and `SafeArea` on the same composer or sheet, use one standard mechanism first (`Scaffold` + `resizeToAvoidBottomInset` + `SafeArea(top: false)` or shared modal sheet wrapper). If a fix adds competing inset sources, **remove complexity** until one clean owner remains.
+- Stay focused on the exact problem requested; avoid off-topic theory or repetition.
+- **Destructive file operations:** Never delete project files automatically — ask first unless the user explicitly requested deletion.
+- **Completion replies:** **2–3 words max** after the user-name prefix unless the user asked a question requiring explanation (see **`rules.mdc`**).
+
+---
+
+## Analyzer, Linter & Type Hygiene (Mandatory)
+
+### Mobile / Dart / Flutter
+
+- After every change, run **`flutter analyze`** on touched code (or check IDE diagnostics) and **resolve all errors, warnings, and `info` lints** (`directives_ordering`, `unnecessary_import`, `deprecated_member_use`, etc.).
+- Prefer **`dart fix --apply`** for auto-fixable lints before hand-editing.
+- Treat deprecations as fix-now — never leave new analyzer issues for a follow-up.
+
+### Web / TypeScript / JavaScript
+
+- Run **`npm run lint`** and type checks (`tsc --noEmit` or project script) on touched work; resolve all errors and warnings before finishing.
+- Prefer strict types over `any` or untyped casts.
+
+### Other Stacks / Backends
+
+- Run the repository's static analyzer, type checker, linter, and schema/migration validator before concluding work.
+
+---
+
+## Async & Lifecycle Safety (Mandatory)
+
+- **Always** check **`context.mounted`** / widget **`mounted`** (or component mount state / `AbortSignal`) after **`await`** before navigation, dialogs, bottom sheets, state updates, or toasts.
+- Wrap async work in **`try/catch`**; **never** write empty **`catch (_) {}`** or silently swallow failures.
+- Map/throw typed domain exceptions (**`AppException`** / **`Failure`**) in services and state controllers; log with structured logger (**`appLog`**) and report unexpected errors to crash reporting (`crashReporting.recordError`).
+- Dismiss the keyboard before async submission and navigation:
+
+```dart
+SystemChannels.textInput.invokeMethod('TextInput.hide');
+FocusScope.of(context).unfocus();
+```
+
+- Set **`autofocus: false`** on form fields unless the screen explicitly requires immediate focus (e.g., dedicated search or rename modal).
+- Explicitly convert/cast **`dynamic`** / **`unknown`** values safely (e.g., `.toString()` or runtime validation) to avoid `argument_type_not_assignable` and runtime crashes.
+
+---
+
+## Colors API (Flutter Widgets)
+
+- **Never** use **`withOpacity()`**.
+- **Always** use **`withValues(alpha: …)`** on a semantic **`context.*`** color — e.g., `context.textPrimary.withValues(alpha: 0.5)`.
+
+---
+
+## Comments (see also `english-comments-only.mdc`)
+
+- Keep comments **minimal and purposeful**. Remove redundant or stale comments in areas you edit.
+- All developer comments remain **English only**.
+
+---
+
+## Terminal (Windows & Cross-Platform)
+
+- **Never** chain commands with **`&&`** in Windows PowerShell or CMD — use **`;`**.
+- Example: `cd C:\path\to\project; flutter analyze`
+- Use **`&&`** only in bash / POSIX shells.
+
+---
+
+## General Habits
+
+- Flutter: use **`const`** constructors wherever possible; use **`ListView.builder`** / **`GridView.builder`** (or virtualized lists on web) for long collections.
+- Keep imports cleanly ordered: core SDK → third-party packages → project imports.
+- Prefer **`final class`** + injected/top-level instance over static-only utility classes.
+- Keep **one empty line at EOF** when the repository follows that convention.
+- Design UI, layout, and caches for both **mobile and tablet** viewports (and desktop where applicable) — never expand frozen legacy web targets inside mobile codebases.
+
+---
+
+## Performance & Lazy Controller Initialization (Mandatory)
+
+- **Lazy platform-channel & heavy controllers:** Never instantiate heavy platform-channel or worker controllers (e.g., `AudioPlayer`, camera/recorder/video controllers, heavy Web Worker pools, database handles) eagerly in field initializers; initialize them lazily on first use so widget/component construction stays lightweight, fast, and unit-testable.
+- **Viewport list build purity:** Never spawn uncached async decrypt or network/DB futures inside list-item `build()` / render loops on every frame; always check synchronous in-memory caches first (`decryptTextCache`, `expressionCache`, `peekCachedKeysSync`, etc.) and assign stable keys (`ValueKey` in Flutter, stable `key` in React) to message, feed, and list items.

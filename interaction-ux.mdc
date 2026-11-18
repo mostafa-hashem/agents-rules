@@ -1,0 +1,151 @@
+---
+description: Universal UX & interaction standards — confirmations, custom toasts, skeletons, 0ms optimistic UI, tap guards, insets, tabs, and zero-count hygiene
+alwaysApply: true
+---
+
+# Interaction & UX Standards
+
+**Scope:** All client screens, dialogs, bottom sheets, and interactive controls. Design primitives: **`mandatory-design.mdc`**. Architecture: **`architecture-and-state.mdc`**.
+
+---
+
+## Confirm Before Consequential Actions (Mandatory)
+
+Any action that **deletes, removes, hides, mutes, blocks, archives, reports, leaves**, or alters **privacy, security, or relationship** state must confirm first — via **`showConfirmationDialog`** / **`showAppDialog`** with a clear localized title, **plain-language consequence**, and **Confirm / Cancel** actions.
+
+- **Never** execute consequential or destructive mutations directly on a menu or bottom-sheet tap alone.
+- Destructive actions: pass **`isDangerous: true`** + semantic danger color token (`context.danger`).
+- All confirmation copy comes from **l10n** — describe the actual consequence in plain language, never vague one-liners like "Are you sure?".
+
+---
+
+## Toast Feedback (Mandatory)
+
+User-triggered actions must never fail silently:
+
+- **Custom toast exclusivity:** **Always** use the project's centralized toast helpers (**`showSuccessToast`**, **`showErrorToast`**, **`showWarningToast`**, **`showInfoToast`**). Raw framework snackbars or browser alerts (**`ScaffoldMessenger.of(context).showSnackBar`**, **`window.alert`**) are **strictly forbidden** everywhere in the app.
+- **No double toasts on fast optimistic actions:** Never emit a pre-action `showInfoToast('Deleting...')` followed immediately by `showSuccessToast('Deleted')`; rely on instant 0ms optimistic UI feedback and emit at most a single outcome toast (or **`showErrorToast`** upon rollback).
+- Copy must come strictly from **l10n** — never hardcoded strings.
+- For non-optimistic blocking submissions, show control-scoped loading alongside toast error handling — a toast alone is insufficient.
+
+---
+
+## Loading UI
+
+- Prefer **skeleton loaders** (`Skeletonizer` / shimmer matching theme tokens) for list, feed, and tab body fetches.
+- Reserve spinners strictly for **tiny inline** actions (e.g., send icon, confirm button).
+- Whenever cached data exists, **keep rendering cached rows** during background refresh — never blank the screen.
+
+---
+
+## Loading on Every User Mutation (Mandatory)
+
+Every user-triggered async mutation must display loading feedback for its full duration using **logical placement** rather than a blanket full-screen blocker:
+
+| Trigger | Where Loading Appears |
+| --- | --- |
+| Primary / form submit (`AppButton`) | Loading indicator + disabled state on that button |
+| Inline row, chip, header, or toggle action | Indicator **on that control**; disable conflicting siblings while in flight |
+| List / screen initial fetch | Content-area skeleton — keep navigation chrome visible |
+| Background refresh with cache | Keep showing cached rows; optional subtle refresh indicator |
+
+- State controllers must expose an in-flight flag before `await` and clear it in `finally` / both success and failure branches.
+- Re-entrant calls: ignore duplicate triggers while the operation is already in flight.
+- **Never** ship create/update/delete/mute/hide/send flows without visible feedback.
+
+---
+
+## Optimistic UI Updates & Background Synchronization (Mandatory)
+
+Every user-triggered interaction (sending text/stickers/media, marking items/chats as read, clearing unread badges, editing/deleting/pinning/muting, reactions, block/unblock, role/membership changes, settings toggles) **must** update UI state in memory synchronously at **0ms** — **before** awaiting key resolution, encryption, uploads, local persistence, or backend/DB requests:
+
+1. **Immediate local reflection:** Mutate in-memory models (`copyWith`) and emit updated state synchronously before the first `await` so visual feedback (message bubble, cleared unread badge, updated row, toggle state) appears with zero lag or flicker.
+2. **Background synchronization:** Dispatch backend / database sync asynchronously in the background (`unawaited` or non-blocking queue). Never stall UI updates, animations, or screen transitions behind background network/crypto latency.
+3. **No dropped requests:** Rapid mutations (such as consecutive mark-as-read calls) must never be silently discarded due to transient in-flight flags; coalesce or queue pending sync requests so the backend always reaches consistency.
+4. **Snapshot rollback on failure:** Capture a rollback snapshot prior to optimistic mutation; if the background sync fails, restore the previous in-memory state and trigger **`showErrorToast`**.
+5. **Counters & previews in sync:** Adjust unread counts, totals, and item/recent previews in the exact same synchronous state emission — never wait for a full refetch just to fix counters or previews.
+
+**Server-authoritative delete reconciliation** follows **`data-sync-and-security.mdc`** — do not invent parallel merge paths.
+
+Optimistic updates do **not** replace explicit pull-to-refresh, search/filter reloads, or parent list synchronization after child screen mutations.
+
+---
+
+## Repeated Tap Guard (Mandatory)
+
+- **`AppButton`** / **`AppBadgedIconButton`**: enable repeated-tap guarding by default (`guardRepeatedTaps: true`) and bind disabled state (`onPressed: null`) while loading.
+- Custom **`InkWell`**, **`GestureDetector`**, or **`IconButton`**: wrap callbacks with **`guardTap`** or an explicit in-flight guard.
+- **State controllers:** auth, navigation, and destructive entrypoints must early-return when already loading or in a terminal completed state.
+- **Listeners:** use **`listenWhen`** (or edge-triggered effect guards) for one-shot navigation so terminal states can never push duplicate routes.
+
+---
+
+## Dialogs & Bottom Sheets (Mandatory)
+
+- Always use the project's shared dialog and sheet wrappers (`showAppDialog`, `showConfirmationDialog`, `showAppModalBottomSheet` + `AppBottomSheetBody` + `AppBottomSheetHandle`).
+- Sheets: enforce consistent horizontal padding, unified icon leading glyphs, semantic danger color (`context.danger`) for destructive items, and bottom safe-area inset.
+- **Forbidden:** bare `AlertDialog`, raw `showModalBottomSheet` missing bottom safe inset, or destructive/privacy actions firing without confirmation.
+
+---
+
+## Chrome-Preserving Errors (Mandatory)
+
+When an initial list or detail fetch fails and **no** cached data is available:
+
+- **Keep chrome visible** — preserve the app bar, back button, tabs, bottom navigation, and primary actions.
+- Surface failures via **error toast** in a scoped listener — **never** replace the entire screen with a full-page error widget for tab or list loads.
+- Render empty or retryable error states inside the **content area only**.
+- Full-page error views are reserved strictly for standalone fatal/unrecoverable routes.
+
+---
+
+## System Insets & Keyboard (Mandatory)
+
+Verify layouts on **both gesture navigation and 3-button navigation** — the lowest sheet row or input composer must never sit behind the OS navigation bar.
+
+| Chrome | Bottom Inset Owner |
+| --- | --- |
+| `Scaffold.bottomNavigationBar` | Scaffold — body uses `SafeArea(bottom: false)` |
+| Modal bottom sheets | Shared sheet body / `SafeArea(top: false)` once |
+| Full-screen with keyboard | `resizeToAvoidBottomInset: true` + body `SafeArea` |
+| Pinned composer + resize true | Composer uses `SafeArea(top: false)` + fixed padding — **no** extra `viewInsets.bottom` |
+| Embedded composer + resize false | Add `viewInsets.bottom` (+ `paddingOf.bottom` only if outside `SafeArea`) |
+
+- **Single keyboard mechanism:** never stack `resizeToAvoidBottomInset` + manual `viewInsets` + redundant `SafeArea` on the same composer without a documented reason.
+- Never use hardcoded bottom pixel spacers that guess navigation bar height.
+- Badged icons: use **`AppBadgedIconButton`** / **`AppBadgeOverlay`** with `IgnorePointer` on the badge so the full hit target remains clickable.
+
+---
+
+## End-User Copy Clarity
+
+- Write strictly for **end users** — never surface raw pixel sizes, JPEG quality numbers, internal database column/RPC names, or cache keys in user-facing UI (unless inside admin/developer diagnostics).
+- State clearly **what changes**, **where**, and any plan/tier impact in plain localized language.
+
+---
+
+## Tab Navigation & Active-Tab Re-Tap (Mandatory)
+
+- **Preserve scroll on tab switch:** Switching between tabs must **never** reset scroll offset or trigger an automatic feed reload. Preserve scroll state via `PageStorageKey` / `AutomaticKeepAliveClientMixin` (or route/state preservation on web).
+- **Re-tap active tab only:** Tapping the *already active* tab is the **only** tab tap that scrolls to the top and triggers a soft refresh.
+- **Flutter `TabBar.onTap` trap:** In Flutter's `TabBar`, `_controller.animateTo(index)` updates `_tabController.index` *before* invoking `widget.onTap(index)`. Never check `if (index == 0 && _tabController.index == 0)` to detect a re-tap — it falsely evaluates to `true` on every switch to tab 0. Track the previously active tab index in dedicated state (e.g., `_currentActiveTabIndex`) to distinguish tab switching from active-tab re-taps.
+
+---
+
+## Zero-Count Engagement & Layout Reservation (Mandatory)
+
+- **No phantom layout reservation:** When an entity/post has zero reactions, comments, and shares (or zero sub-items), render nothing — no empty summary rows, spacers, or dividers.
+
+```dart
+if (item.reactionsCount > 0 || item.commentsCount > 0 || item.sharesCount > 0) ...[
+  EngagementStatsRow(...),
+  const SizedBox(height: 8),
+  const Divider(),
+]
+```
+
+---
+
+## Touch Targets
+
+- Every interactive control must provide at least **44×44** logical pixels of tappable area (padding counts toward hit area).

@@ -1,0 +1,48 @@
+---
+description: Universal Flutter mobile entry — binds the complete mobile rule suite and native Crashlytics/release verification checklist
+alwaysApply: true
+---
+
+# Mobile (Flutter) — Platform Entry & Checklist
+
+**Platforms:** Android, iOS (do not expand legacy/frozen Flutter Web targets when a dedicated web frontend exists).
+
+This rule binds the complete mobile engineering contract across **`#1–8`** simultaneously — never wait for separate rule mentions:
+
+| File | Role |
+| --- | --- |
+| **`rules.mdc`** | Master index, priority hierarchy, and reply formatting |
+| **`git-commits.mdc`** | English commits without AI/tool co-author trailers |
+| **`english-comments-only.mdc`** | English-only comments; 100% l10n for UI strings |
+| **`engineering-quality.mdc`** | `flutter analyze` clean, `context.mounted`, lazy controllers, Windows `;` |
+| **`mandatory-design.mdc`** | Semantic context colors, `font*W*` typography, unified icons, shared widgets, bidi/l10n |
+| **`interaction-ux.mdc`** | Confirmations, custom toasts, skeletons, 0ms optimistic UI, tap guards, insets |
+| **`architecture-and-state.mdc`** | Feature-first folders, thin screens, Cubit/BLoC patterns, scoped rebuilds |
+| **`data-sync-and-security.mdc`** | Any backend/DB abstraction, crypto isolates, authoritative sync, FCM tray hot paths |
+
+Web app work → **`web-frontend.mdc`**. Shared database migrations → single project migrations directory.
+
+---
+
+## Flutter Mandatory Quick Checks
+
+- **`flutter analyze`:** Zero errors, zero warnings, zero `info` diagnostics on every change (`dart fix --apply` first for auto-fixable items).
+- **Lifecycle safety:** Always check `context.mounted` (or `mounted`) after every `await` before navigation, dialogs, sheets, or toasts.
+- **Colors & sizing:** Never `withOpacity()` (always `withValues(alpha:)` on `context.*`); never `.sp`/`.w`/`.h`/`.r` (ScreenUtil) on new or touched UI; never `TextStyle(height: …)` or fixed-height primary text wrappers.
+- **UI exclusivity:** Never raw `ScaffoldMessenger.of(context).showSnackBar`, `TextField`, `AlertDialog`, or `CachedNetworkImage` directly in features when shared wrappers exist.
+- **TabBar re-tap safety:** Track `_currentActiveTabIndex` explicitly in state; never rely on `_tabController.index` inside `TabBar.onTap` (Flutter updates `_tabController.index` before firing `onTap`).
+- **Keyboard & insets:** One bottom inset owner per screen/composer; dismiss keyboard cleanly before async submit/navigation.
+
+---
+
+## Crashlytics & Native Error Reporting Checklist
+
+| Cause | Solution |
+| --- | --- |
+| Running in **Debug** mode (`flutter run`) | Crashlytics is disabled by default in `kDebugMode`. Test with `flutter run --release` or `--dart-define=ENABLE_CRASHLYTICS_IN_DEBUG=true` |
+| Expecting instantaneous crash reports | Fatal crashes upload on the **next app launch** after the crash occurs |
+| Test crash call in startup path | Never call `FirebaseCrashlytics.instance.crash()` during app initialization — it breaks the launch cycle |
+| Crashlytics not enabled in Firebase | Firebase Console → target project → Crashlytics → Get started |
+| Android application/bundle ID mismatch | Ensure `applicationId` matches `google-services.json` (`package_name`) |
+| iOS missing dSYM symbols | Add Run Script Phase in Xcode to upload dSYMs via FlutterFire CLI or Firebase script |
+| ProGuard / R8 stripping symbols | Keep `-keep class com.google.firebase.crashlytics.** { *; }` / `crashlytics.**` in `proguard-rules.pro` |
