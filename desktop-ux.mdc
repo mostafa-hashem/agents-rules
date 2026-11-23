@@ -1,0 +1,27 @@
+---
+description: Use for any Windows, macOS, or Linux desktop UI, including windows, keyboard, menus, accessibility, and native interaction
+alwaysApply: false
+---
+
+# Desktop UX
+
+## Windows and layout
+
+- Design for a resized window, split screen, maximized mode, and supported display scales. Adapt layout to available width. Collapse panes or move secondary actions into overflow when space is limited. Keep primary actions reachable at the minimum supported size.
+- Choose a sensible minimum window size when the toolkit supports it. If restoring window bounds, validate them against available displays and recover onto a visible display after monitor or DPI changes.
+- Preserve navigation, selection, scroll, and drafts while resizing or moving between layouts. Give scrolling panes clear boundaries and support mouse wheel and trackpad input.
+- For dense tables and master-detail views, define how columns, selection, details, and bulk actions behave in narrow windows. Keep the selected item visible while navigating by keyboard and virtualize large datasets.
+- Honor system theme, text scale, contrast and motion settings. Verify focus indicators, screen-reader names, and RTL layouts in the actual toolkit.
+
+## Input and commands
+
+- Route menus, toolbar buttons, context menus, and shortcuts through the same commands and availability checks. Follow platform modifier conventions and avoid collisions with OS shortcuts or text editing.
+- Provide logical Tab and Shift+Tab order, keyboard selection for lists and tables, clear focus on open, and focus restoration after dialogs. Respect text editing and IME composition when handling Enter and Escape.
+- Support pointer hover, right-click, tooltips, context menus, and selection where appropriate. Make context actions discoverable and keyboard reachable. Keep touch targets usable on touch-capable devices.
+- Use native file pickers for open and save where appropriate. Handle picker cancellation, missing files, permission errors, and unsupported formats. Provide an accessible alternative for drag-and-drop.
+
+## Desktop lifecycle and verification
+
+- Define close versus quit, unsaved changes, window focus, and tray behavior where relevant. Keep long operations cancellable when possible and handle sleep, wake, and connectivity changes.
+- For multiwindow apps, define which state is shared and which belongs to a window. Route notifications and deep links to the appropriate existing window or create one intentionally.
+- Check keyboard-only operation, resize, display scale, focus restoration, and light/dark and RTL behavior where supported. Test file dialogs and menus in the packaged app on affected operating systems.

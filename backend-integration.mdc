@@ -1,0 +1,25 @@
+---
+description: Use for integrating REST, GraphQL, gRPC, SDKs, Supabase, Firebase, custom APIs, auth, storage, webhooks, and database migrations
+alwaysApply: false
+---
+
+# Backend Integration
+
+## Contracts and boundaries
+
+- Follow the existing API or SDK contract. For new capabilities, agree on request, response, and error shapes and document compatibility for shipped clients. Validate external data at boundaries and convert it into typed application models.
+- Keep SDKs and HTTP clients behind service or repository boundaries. Centralize endpoints, timeouts, session handling, and environment configuration. Separate development, test, and production and expose only public configuration in client builds.
+- Authenticate server-side and authorize every protected operation by resource and tenant. Enforce business invariants in the service or database transaction. Keep database credentials and privileged vendor keys on trusted servers.
+- Keep object and field validation at the trust boundary and set server-side limits for payloads, list sizes, and expensive operations. Map validation, conflict, permission, and connectivity failures to distinct application outcomes.
+- Use the provider's supported auth flow. Coordinate session refresh and avoid unbounded retries after authentication failures. For native browser-based OAuth, use the provider's supported PKCE flow and validate the callback and state. Clear account-scoped work on sign-out.
+
+## Reliability
+
+- Configure appropriate timeouts and cancellation. Retry transient failures with bounds, backoff, and jitter where the operation is safe to retry. Honor server backoff signals. Reuse idempotency keys where supported and reconcile ambiguous write outcomes before replaying them.
+- Paginate large collections and scope realtime subscriptions. Validate upload size and type server-side, restrict access to stored objects, and use expiring URLs when private objects need temporary access.
+- For webhooks, verify signatures using the provider's supported scheme, enforce replay protection where supported, and deduplicate event processing. Correlate failures with redacted structured logs.
+- Keep schema, grants, policy, and index changes in versioned migrations. Plan compatibility for deployed clients, test forward migration and recovery in a safe environment, and use the established release flow.
+- For incompatible schema changes, introduce the compatible replacement first, migrate or backfill existing data, and remove the legacy path after supported clients have moved.
+- Exercise happy paths and relevant failures, including expired sessions, unauthorized access, malformed responses, timeouts, duplicate writes, and reconnect. Use a test backend or sandbox for integration verification.
+
+See [Data sync and security](data-sync-and-security.mdc) for cache and reconciliation, and [Supabase](supabase.mdc) when it is the provider.

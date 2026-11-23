@@ -1,0 +1,17 @@
+---
+description: Use when integrating or changing Supabase Auth, Data API, PostgreSQL policies, Storage, Realtime, RPCs, or Edge Functions
+alwaysApply: false
+---
+
+# Supabase
+
+Apply [Backend integration](backend-integration.mdc) and [Data sync and security](data-sync-and-security.mdc). Check the installed SDK, project settings, and current provider docs before selecting APIs.
+
+- Use the publishable client key, or the legacy anon key when required by the project. Reserve secret and service-role credentials for trusted server code. Verify that privileged handlers authenticate the caller and check resource access before acting.
+- Explicitly grant the minimum Data API privileges required. Enable RLS on tables exposed via the Data API and define policies for each intended role and operation. Verify policy behavior with the actual client roles. Use trusted authorization data; user-editable metadata is unsuitable.
+- For updates, check row visibility and the allowed new row values. For views, verify that they preserve the intended underlying access controls. Restrict RPC execution grants and prefer invoker rights. Review authorization, privilege, and search path for any required definer function.
+- For Storage, set private access by default for sensitive files. Verify bucket and object policies for each supported operation. Use short-lived signed URLs for temporary access when needed.
+- Scope Realtime subscriptions and verify authorization for the selected Realtime mode. Tear down old subscriptions on session changes and recover after reconnect according to the app's reconciliation rules.
+- Keep schema changes, grants, and policies together in versioned migrations. Verify migrations and regenerate client types only where the project uses them. Test access with anonymous users, the resource owner, another tenant or user, and any sanctioned privileged role. Cover Auth, Storage, RPC, and Realtime paths affected by the change.
+
+References for [Data API grants and RLS](https://supabase.com/docs/guides/api/securing-your-api) and [RLS policies](https://supabase.com/docs/guides/database/postgres/row-level-security).

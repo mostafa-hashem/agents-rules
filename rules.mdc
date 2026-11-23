@@ -1,97 +1,34 @@
 ---
-description: Master index of all universal agent rules — mandatory on every task, file edit, and verification step across any stack, architecture, or database
+description: Entry point for shared engineering rules and task-specific platform and backend rules
 alwaysApply: true
 ---
 
-# Universal Agent Rules — Master Index
+# Agent Rules
 
-**Rule files** in `.cursor/rules/` (or your agent rules directory). **Every rule file (`#1–10`) uses `alwaysApply: true`** and is strictly binding across any project, stack, architecture, backend, or database.
+Inspect the relevant project instructions, manifests, stack, target platforms, and existing conventions before editing. In a monorepo, identify every affected package and apply the rules for each affected surface. Reuse existing state management, design primitives, localization, and service boundaries.
 
-**Mandatory full-set binding:** Opening or working in any repository containing these rules binds **all** rows below immediately. Never wait for the user to `@`-mention individual satellite files — read, adapt to the repository's existing stack, and enforce the entire suite as a single contract.
+## Load the rules for the task
 
----
+Read the applicable files below from the same directory as this rule before implementing. Combine rows when work crosses boundaries. Use project-specific guidance for implementation details and apply security, accessibility, and data-consistency requirements throughout.
 
-## Mandatory Continuous Rule Check (Every Step)
-
-- **Inspect & verify at every step:**
-  1. **Before editing:** Inspect the target project's existing stack (Flutter, Next.js, React, native, backend, etc.), architecture (BLoC/Cubit, Riverpod, Provider, Redux, Zustand, MVVM, Clean Architecture, Feature-First, etc.), backend & database (Supabase, Firebase, REST, GraphQL, gRPC, WebSockets, PostgreSQL, MySQL, MongoDB, SQLite, Drift, Hive, Isar, IndexedDB, etc.), theme tokens, shared UI primitives, and localization setup. Cross-check planned edits against `rules.mdc` and all applicable rules (`#2–10`).
-  2. **During & after implementation:** Verify every modified file against every binding rule before running final checks or declaring completion. Never skip a rule check under time pressure.
-- **Core non-negotiables (universal across all apps):**
-  1. **0ms Optimistic UI first** with snapshot rollback on failure — never block user taps, list updates, or visual state transitions on background encryption, media uploads, local DB writes, or network/API calls.
-  2. **Live / Decrypted priority over stale local cache** — synchronous in-memory caches and live/realtime state always take priority over local persistence (SQLite, Drift, Hive, Isar, IndexedDB, SharedPreferences) for item/message previews and unread counts unless `cache.timestamp >= server.timestamp`.
-  3. **Custom toast / feedback helper exclusivity** — always use the project's centralized toast helpers (`showSuccessToast`, `showErrorToast`, `showWarningToast`, `showInfoToast`, or equivalent); raw framework snackbars or browser alerts (`ScaffoldMessenger.of(context).showSnackBar`, `window.alert`) are strictly forbidden.
-  4. **Design tokens, shared primitives & l10n strictness** — 100% localized UI strings (zero hardcoded English/Arabic copy), semantic context/theme color tokens only (zero raw hex or framework palette colors in feature code), shared typography scale helpers, unified icon pack, cached image wrappers, skeleton loaders (`Skeletonizer`/shimmer) for lists/feeds, and structured logging (`appLog`/project logger — never raw `print`).
-  5. **Zero N+1 queries & scoped UI rebuilds** — resolve keys, auth tokens, and sender/entity lookups once per batch, peek synchronous in-memory caches before async storage/service lookups, and scope UI rebuilds (`buildWhen`, `BlocSelector`, fine-grained selectors, revision counters) so unrelated state emissions never rebuild active lists or timelines.
-
----
-
-## Rules Index
-
-| # | File | Scope |
-| --- | --- | --- |
-| 1 | **`rules.mdc`** (this file) | Master index — binding directive, stack adaptation, priority, assistant replies |
-| 2 | **`git-commits.mdc`** | Commit messages — English only, focused on why, zero AI/tool co-author trailers |
-| 3 | **`english-comments-only.mdc`** | English-only comments/docs; 100% localized UI strings; English commits |
-| 4 | **`engineering-quality.mdc`** | Craftsmanship, analyzer/lint zero warnings, async safety, lazy controllers, terminal rules |
-| 5 | **`mandatory-design.mdc`** | **Design system** — semantic colors, typography, unified icons, app bars, tabs, shared widgets, l10n, bidi/fonts |
-| 6 | **`interaction-ux.mdc`** | Confirmations, toasts, skeletons, scoped loading, 0ms optimistic UI, tap guards, insets, tabs |
-| 7 | **`architecture-and-state.mdc`** | Feature-first modularity, thin screens, naming, state patterns, zero UI business logic, cache retention |
-| 8 | **`data-sync-and-security.mdc`** | Any backend/DB abstraction, crypto, authoritative stream/cache sync, push tray, N+1 prevention, logging |
-| 9 | **`mobile-flutter.mdc`** | **Mobile (Flutter)** — binds `#1–8` + Flutter checks + Crashlytics/native release checklist |
-| 10 | **`web-frontend.mdc`** | **Web (Next.js / React / Modern Web)** — SSR/App Router, design tokens, workers, security, sync parity |
-
----
-
-## Universal Stack & Project Adaptation Map
-
-These rules adapt automatically to both **single-app repositories** and **multi-package monorepos**:
-
-| Workspace / Target | Applicable Rules |
+| Work | Read |
 | --- | --- |
-| Mobile / Client App (Flutter iOS/Android, etc.) | `#1–9` (`mobile-flutter.mdc` + cross-cutting & UI/data rules) |
-| Web Frontend (`web/`, `apps/web/`, Next.js/React `src/`) | `#1–4`, `#6–8`, `#10` (`web-frontend.mdc` + cross-cutting & web rules) |
-| Shared DB / Backend / Migrations (`supabase/migrations/`, `prisma/`, `migrations/`, `sql/`) | Single source of truth for schema, indexes, and access policies (RLS/RBAC); both clients consume |
+| Implementation and verification | [Engineering quality](engineering-quality.mdc), [Architecture and state](architecture-and-state.mdc) |
+| Any user interface | [Design system](mandatory-design.mdc), [Interaction UX](interaction-ux.mdc) |
+| API, auth, storage, cache, realtime, or backend work | [Backend integration](backend-integration.mdc), [Data sync and security](data-sync-and-security.mdc) |
+| Supabase integration or database changes | [Supabase](supabase.mdc) in addition to the backend rules |
+| Any Flutter target | [Flutter](flutter.mdc) |
+| Flutter on Android or iOS | [Flutter mobile](mobile-flutter.mdc) |
+| Any desktop UI on Windows, macOS, or Linux | [Desktop UX](desktop-ux.mdc) |
+| Flutter desktop | [Flutter desktop](flutter-desktop.mdc) in addition to Flutter and desktop UX |
+| Rust desktop or a Rust component embedded in a desktop app | [Rust desktop](rust-desktop.mdc), including its FFI section when applicable |
+| Browser UI or a desktop webview frontend | [Web frontend](web-frontend.mdc), with server-rendering guidance for browser deployments that use it |
+| Developer comments or commits | [English comments](english-comments-only.mdc), [Git commits](git-commits.mdc) |
 
-- **Platform boundary discipline:** Keep platform targets cleanly separated — do not expand frozen legacy web targets inside a mobile codebase when a dedicated web frontend exists, and never apply mobile widget APIs to React/DOM components (or vice versa).
-- **Zero hardcoded credentials:** API URLs, project IDs, and keys must always be loaded from centralized config/environment modules — never hardcoded in features or committed as secrets.
+For Flutter with a Rust bridge, apply Flutter rules to the Dart app and Rust rules to the Rust component and bridge. For Flutter Web, apply Flutter rules plus the browser security and accessibility requirements that fit the target. Preserve established platform support boundaries.
 
----
+Keep the scope focused. Define how the change will be verified on the affected targets and report what passed, what remains unverified, and why.
 
-## Priority When Rules Overlap
+## Assistant replies
 
-1. **`data-sync-and-security.mdc`** wins for data sync, cache reconciliation, encryption, push/tray hot paths, and security.
-2. **`mandatory-design.mdc`** wins for semantic colors, typography, icons, shared UI primitives, and localization/bidi.
-3. **`english-comments-only.mdc`** wins for comment language and where user-facing strings live.
-4. **`engineering-quality.mdc`**, **`interaction-ux.mdc`**, and **`architecture-and-state.mdc`** enforce craftsmanship, UX behavior, and architectural separation where not overridden by (1–2).
-5. **`mobile-flutter.mdc`** and **`web-frontend.mdc`** govern platform-specific details within their respective apps without cross-bleeding widget/DOM APIs.
-
----
-
-## Standard Project Layer Mapping
-
-Map these canonical roles onto the active repository's folder structure:
-
-| Layer | Typical Paths | Role |
-| --- | --- | --- |
-| Feature Modules | `lib/features/<name>/`, `src/features/<name>/` | Vertical slices: state controller (`cubit/`/`bloc/`/`stores/`), `data/`, `ui/` |
-| Theme & Design Tokens | `lib/ui/resources/`, `src/styles/tokens.css` | Semantic color getters, typography scale (`font*W*`), script-aware fonts |
-| Shared UI Primitives | `lib/ui/widgets/`, `src/components/ui/` | App bars, cached images, inputs, sheets, dialogs, skeletons, badges |
-| Core Utilities & Services | `lib/utils/`, `lib/core/`, `src/lib/` | Structured logger (`appLog`), crypto/workers, sync helpers, tap guard, typed errors |
-| Localization | `lib/l10n/` (`*.arb`), `src/lib/i18n/`, `locales/` | Synchronized locale dictionaries (`en`, `ar`, etc.) with RTL/LTR support |
-| Environment & Config | `lib/*_options.dart`, `src/config/`, `.env*` | Centralized backend/DB endpoints and public keys (never hardcoded) |
-
----
-
-## Assistant Replies
-
-- **Prefix with user's name:** Start every reply with the user's name followed by a comma: `مصطفى، ` (in Arabic) or `Mostafa, ` (in English), followed by the concise response/summary.
-- **Completion replies:** **2–3 words max** after the name (e.g., `مصطفى، تم التنفيذ بنجاح`). **Never** output long summaries upon completing a task unless the user explicitly asks a question requiring explanation.
-
-### Arabic (RTL)
-
-When the user writes in **Arabic**, or you reply in **Arabic**:
-
-- Write the **main reply in RTL** so it reads naturally right-to-left.
-- Keep **code, paths, URLs, JSON, and API names** in separate **LTR** blocks — do not embed them mid-sentence in Arabic.
-- Use **Arabic punctuation** where natural (؟ ،).
-- **English in code/docs** stays English; only **chat to the user** follows this RTL rule when using Arabic.
+For Mostafa's projects, start replies with `Mostafa,` or `مصطفى،` in the user's language. Keep replies concise while still reporting meaningful changes, verification, and blockers. In Arabic replies, place long code, commands, and paths in separate left-to-right blocks when useful.

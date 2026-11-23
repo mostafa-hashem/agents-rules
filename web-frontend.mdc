@@ -1,83 +1,13 @@
 ---
-description: Universal web frontend rules (Next.js / React / TypeScript / Modern Web) — architecture, design tokens, Web Workers, security, and cross-platform sync parity
-alwaysApply: true
+description: Use for browser or webview frontends, including React, Next.js, TypeScript, and client-server rendering boundaries
+alwaysApply: false
 ---
 
-# Web Frontend (Next.js / React / Modern Web)
+# Web Frontend
 
-**Scope:** Dedicated web frontend workspaces (`web/`, `apps/web/`, `src/`). Mobile app work → **`mobile-flutter.mdc`** + **`rules.mdc`**. Shared schema/policies → central database migrations directory.
-
-Cross-cutting rules still apply strictly: **`rules.mdc`**, **`git-commits.mdc`**, **`english-comments-only.mdc`**, **`engineering-quality.mdc`** (Windows `;`, no empty catches, strict types), **`interaction-ux.mdc`** (optimistic UI, skeletons, confirmations), and **`data-sync-and-security.mdc`**.
-
----
-
-## Problem-Solving
-
-- Deliver precise behavior with minimal focused diffs matching existing repository patterns.
-- Choose the simplest React/Next.js architecture — prefer **Server Components** by default where supported, reserving `'use client'` for genuinely interactive leaves.
-- Use **skeleton loaders** for list and feed fetches — never blank screens or full-page spinners when layout/chrome can stay visible.
-- Completion replies: **2–3 words max** after the user-name prefix unless the user asked a question requiring explanation (see **`rules.mdc`**).
-
----
-
-## Architecture
-
-| Layer | Rule |
-| --- | --- |
-| Routes / Pages | `src/app/` — thin `page.tsx` (~30–80 lines); compose panels and workspaces |
-| Components | `src/components/` — `ui/`, `layout/`, `features/` (~150–250 lines max per panel; split earlier) |
-| Data & API | `src/lib/<domain>/*-api.ts` + custom `use*` hooks — never 200-line data fetches inside JSX |
-| State | Server state + hooks; minimal client stores (`src/stores/`) only where shared client state is required |
-| Crypto / Heavy CPU | **Web Workers only** (`src/workers/`) — Web Crypto API; never block the main UI thread |
-| Types | `src/types/` — strict TypeScript; zero `any` |
-
-- **Platform separation:** Never expand legacy mobile-web fallbacks (`kIsWeb`) when a dedicated web frontend exists.
-- **Naming:** `kebab-case` files; `PascalCase` components; `useX` hooks; `onX` callbacks.
-- **Zero business logic in JSX:** Extract transformations, API orchestration, and formatting into `src/lib/` or custom hooks.
-
----
-
-## UI, Design Tokens & i18n
-
-- Consume all colors, surfaces, radii, and elevation strictly through semantic **CSS variables / design tokens** (e.g., `src/styles/tokens.css`) — never scatter raw brand hex values in feature components.
-- Dark theme canvas uses semantic dark surface tokens — never pure black (`#000000`) except immersive fullscreen media viewers.
-- Configure script-aware fonts (e.g., Arabic + Latin system/brand font stacks) and support light/dark/system themes seamlessly.
-- Extend the shared layout primitives (`app-shell`, sidebars, top nav, mobile tab bar) — never fork duplicate shells.
-- Mobile breakpoints: touch targets **≥ 44px**; always preserve visible `:focus-visible` keyboard rings.
-- Virtualize long feeds, timelines, and tables when collections grow large.
-- **i18n:** Route 100% of UI strings through the project's i18n dictionary/helper — **zero** hardcoded copy; keep locales (`en`, `ar`, etc.) and `dir` (`rtl`/`ltr`) synchronized, with `dir="auto"` for user-authored content.
-
----
-
-## Backend, Auth & Security (Any Backend / Any DB)
-
-- Use SSR-safe session clients and middleware refresh where SSR is enabled (e.g., `@supabase/ssr`, NextAuth/Auth.js, HTTP-only session cookies, or typed BFF endpoints).
-- **Environment safety:** Only expose explicitly public client variables (e.g., `NEXT_PUBLIC_*`) to the browser — **never** expose service-role, admin, or private API keys in client bundles or git history.
-- Enforce server-side authorization / Row-Level Security (RLS), paginate all list queries, and use tightly scoped/bounded realtime subscriptions.
-- **NEVER** log auth tokens, passwords, plaintext messages, or private keys.
-- Sanitize any user-supplied HTML/markdown before rendering and enforce Content Security Policy (CSP) headers.
-
----
-
-## Cross-Platform Crypto & Sync Parity
-
-- When sharing a backend with a mobile client, maintain strict **protocol parity** (cipher suite, key envelope, payload metadata, and `deleted_by`/reconciliation rules per **`data-sync-and-security.mdc`**).
-- Decrypt visible messages/items lazily without stalling scroll; cache decrypted plaintext safely in **IndexedDB** with a versioned, cleanable schema.
-- Run all cryptographic operations inside **Web Workers** using Web Crypto — avoid legacy main-thread libraries (`JSEncrypt`, synchronous crypto) for new code.
-
----
-
-## Quality & Verification
-
-- Run **`npm run lint`**, type checking (`tsc --noEmit`), and **`npm run build`** before finishing release-critical or multi-file changes.
-- Windows PowerShell: chain commands with **`;`**, never **`&&`**.
-
-## Critical Rules Summary
-
-1. Keep web changes strictly inside the web frontend — never expand frozen mobile-web targets.
-2. Centralized SSR/API auth + public env vars only — never hardcode or leak private keys.
-3. Offload crypto to **Web Workers**; maintain exact protocol parity with mobile clients.
-4. Semantic design tokens (`tokens.css`) for styling; skeletons for feeds; `dir="auto"` for user content.
-5. Enforce server authorization/RLS, pagination, and bounded realtime; keep locales + RTL synchronized.
-6. Server Components by default, thin route files, and business/data logic cleanly extracted to `lib/` + hooks.
-7. Manage shared database schema, indexes, and access policies in the central migrations directory only.
+- Follow the project's framework, router, state, and type-checking conventions. Keep routes focused on composition and move queries and domain operations to the appropriate data layer.
+- In server-rendered apps, keep secrets and privileged operations on the server. Scope caches and session clients to users where required. Keep interactive client code and serialized data limited to what the view needs.
+- For browser sessions, follow provider guidance for cookie flags, refresh, and request forgery protections. For webviews, apply the host's security and bridge rules. Keep untrusted content out of privileged contexts.
+- Use semantic HTML, visible keyboard focus, shared design tokens, and locale-aware formatting. Use `dir="auto"` where suitable for user-generated text. Support touch and pointer input where applicable.
+- Escape or sanitize untrusted HTML with the established rendering path. Keep long-running work off the main thread when it causes responsiveness problems; maintain protocol compatibility across clients using the same backend.
+- Run relevant lint, type, build, and browser tests. Verify behavior in the webview runtime when bundled in a desktop app.

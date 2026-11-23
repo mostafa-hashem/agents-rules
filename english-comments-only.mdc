@@ -1,22 +1,10 @@
 ---
-description: All code comments, doc comments, and developer-facing text must be English only; all UI strings must use localization
-alwaysApply: true
+description: Use when writing or editing source code, comments, docstrings, or developer annotations
+alwaysApply: false
 ---
 
-# English-Only Developer Text & Localized UI Copy
+# English-Only Developer Comments
 
-## Comments
-
-- Write **all** new and edited **comments** in **English**: `//`, `/* */`, `///` dartdoc/JSDoc, docstrings, SQL comments, and inline explanations.
-- Do **not** use Arabic or any non-English language in code comments, `TODO`/`FIXME` notes, or developer annotations inside source files.
-- Keep comments **minimal and purposeful** — explain non-obvious *why*, and remove redundant, obvious, or stale comments in any code you touch (see **`engineering-quality.mdc`**).
-
-## User-Facing Strings
-
-- **User-facing strings** must **never** be hardcoded in views or components — neither English nor Arabic.
-- **Mobile / Flutter:** route every UI string through `AppLocalizations` / ARB files (`app_en.arb` + `app_ar.arb`, or project locale files). See **`mandatory-design.mdc`**.
-- **Web / JS / TS:** route every UI string through the project i18n dictionary/helper (`src/lib/i18n/…` or equivalent). See **`web-frontend.mdc`**.
-
-## Commit Messages
-
-- Write all commit messages in English (see **`git-commits.mdc`**).
+- Write new and edited source comments, docstrings, SQL comments, and developer annotations in English. Explain non-obvious intent and constraints.
+- Use the project's localization system for user-facing copy. See [Design system](mandatory-design.mdc).
+- Follow [Git commits](git-commits.mdc) when writing commit messages.

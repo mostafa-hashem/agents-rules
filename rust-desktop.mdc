@@ -1,0 +1,31 @@
+---
+description: Use for Rust desktop apps, native GUI toolkits, Tauri webviews, Rust workers, or Flutter-to-Rust FFI
+alwaysApply: false
+---
+
+# Rust Desktop
+
+## Runtime and application boundaries
+
+- Follow the current toolkit and Cargo workspace structure. For a new project, choose a toolkit based on target OS support, accessibility, native integrations, and distribution requirements. Options include native Rust GUI toolkits and Tauri with a webview frontend.
+- Keep UI events and toolkit objects in their owning event loop. Run blocking I/O and CPU-heavy work on appropriate background tasks. Return typed results, status, and cancellation through the toolkit's supported mechanism. Shutdown must release tasks, handles, and subscriptions.
+- Keep business rules and transport adapters outside UI handlers. Use typed errors for recoverable failures. Propagate or handle errors instead of panicking on normal input, network, or file failures.
+- Prefer safe Rust. Keep necessary `unsafe` code small and document its invariants. Validate paths and use OS-specific storage and permissions through platform APIs.
+
+## Tauri and webviews
+
+- Treat webview and IPC inputs as untrusted. Expose narrow typed commands and validate arguments, authorization, and allowed file paths in the Rust handler.
+- Scope capabilities and plugin permissions to the required windows and operations. Keep remote content out of privileged webviews, enforce a suitable content security policy, and avoid unrestricted filesystem or shell access.
+- Apply [Web frontend](web-frontend.mdc) to UI bundles and [Desktop UX](desktop-ux.mdc) to window and interaction behavior.
+
+## Rust FFI, including Flutter bridges
+
+- Keep the bridge small and document ownership, lifetimes, thread rules, memory allocation and release, and callback teardown. Use supported generated bindings where the project has them.
+- Use FFI-safe types and stable error representations. Keep panics from crossing the boundary. Release handles on both error and shutdown paths and keep blocking work off the caller's UI thread.
+- Validate boundary data and exercise calls, failures, cancellation, and cleanup from the consuming app. Build and package the native libraries for every supported OS and architecture.
+
+## Verification and distribution
+
+- Use the project's Rust toolchain and supported feature combinations. Run `cargo fmt --check`, `cargo clippy`, and `cargo test` with the appropriate workspace or package scope. Commit the app's lockfile.
+- Check release builds and installed artifacts on affected OS and architecture combinations. Verify native libraries, installer or bundles, signing and updater verification where supported, and file and settings paths.
+- When changing persistence or updates, test a fresh install and an upgrade with existing data. Verify that a failed update leaves the previous version and user data usable.

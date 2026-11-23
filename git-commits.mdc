@@ -1,6 +1,6 @@
 ---
-description: Git commit message standards — English only, concise why-focused messages, zero AI/tool co-author trailers
-alwaysApply: true
+description: Use when creating a Git commit or drafting a Git commit message
+alwaysApply: false
 ---
 
 # Git Commits

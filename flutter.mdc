@@ -1,0 +1,15 @@
+---
+description: Use for Flutter or Dart app code on desktop, mobile, and web, including widgets, state, plugins, and async lifecycle
+alwaysApply: false
+---
+
+# Flutter
+
+- Follow the existing state management and feature layout. Keep widgets declarative, scope rebuilds with selectors or equivalent, and use stable keys and lazy builders for large collections.
+- Reuse the project's field, dialog, image, navigation, and feedback wrappers. Use semantic theme colors and shared typography. Use logical pixels and layout constraints for responsiveness and respect system text scaling. Avoid introducing ScreenUtil scaling into feature UI.
+- When the project supplies semantic color extensions or a unified icon pack, use them throughout feature UI. Avoid fixed-height wrappers around primary text and keep decorative badges from intercepting pointer input.
+- Use generated localizations or the project's localization wrapper. Use directional layout and script-aware content direction for user text. Verify mixed Arabic and Latin input with real text.
+- Check `mounted` before using a widget's context after an async gap. Dispose controllers, focus nodes, and subscriptions owned by the widget. Cancel or ignore late results when the owner or active request changes.
+- Keep build methods free of I/O and long-running work. Check whether parsing, image processing, or batch crypto needs an isolate or a worker supported by the target. Initialize expensive platform resources on demand.
+- If using `TabBar` with active-tab retap behavior, track the previously selected tab across tap, swipe, and programmatic changes. `TabBar.onTap` can run after the controller has already moved to the tapped index.
+- Verify package and plugin support for each affected target and the pinned SDK version. Isolate OS-specific calls and provide a fallback for unavailable features. Run formatting, `flutter analyze`, relevant `flutter test` suites, and targeted platform builds as appropriate.

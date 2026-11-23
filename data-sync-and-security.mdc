@@ -1,154 +1,29 @@
 ---
-description: Universal data layer — any backend or database abstraction, encryption, authoritative stream/cache sync, preview resolution, N+1 prevention, push tray hot paths, and logging
-alwaysApply: true
+description: Use for caches, offline operation queues, realtime reconciliation, encryption, notification data, or data protection
+alwaysApply: false
 ---
 
-# Data Sync, Storage, Crypto & Security
+# Data Sync and Security
 
-**Scope:** All backend, database, local cache, encryption, realtime sync, push notification, and logging layers — regardless of stack (**Supabase, Firebase, REST, GraphQL, gRPC, WebSockets, PostgreSQL, MySQL, MongoDB, SQLite, Drift, Hive, Isar, IndexedDB**). Wins over other rules for sync, encryption, and notification hot paths.
+## Authority and recovery
 
----
+- Decide which store owns each field. For server-owned data, distinguish cached data, pending local intents, and confirmed server state. For local-first features, define how local writes and conflicts synchronize. Scope data and work queues by account and workspace.
+- Hydrate local cache without delaying network fetches. Preserve usable cached data during refresh and label stale or offline data where decisions depend on freshness. Use revisions, sequence numbers, or server-issued cursors when available. Treat client clocks as approximate.
+- Reconcile by stable ID, revision, query scope, and explicit deletion signals. A missing record from a partial page or an empty realtime event does not establish deletion. Merge paginated results deterministically and remove only records known to be deleted or no longer accessible.
+- Make durable offline writes explicit. Persist operations only where needed, carry stable IDs for deduplication, preserve required ordering, and define retry, conflict, and terminal failure handling. Acknowledge queued and committed changes separately.
+- On reconnect or resume, resubscribe once per active scope and recover missed events through cursors or a bounded refetch. Release unused connections and ignore results from closed sessions. On account switch or sign-out, cancel account-scoped work and clear or isolate private data.
+- Batch related lookups, bound subscriptions, paginate large datasets, and avoid N+1 database, key resolution, or network calls. Refresh only affected entities where possible.
+- For chat-like features, hydrate previews only from a matching authorized item and revision. Never replace newer server content with stale cache or surface raw ciphertext. Reconcile unread counts and previews together, keeping pending read intents visible until acknowledgment or recovery.
+- When per-user hides or deletions are supported, apply them consistently to list, preview, and notification reads. Scope local cleanup to the affected records and account.
 
-## 1) Backend, Database & Config Abstraction (Any Backend / Any DB)
+## Sensitive data and cryptography
 
-- **Repository / Service encapsulation:** Isolate all remote API and database operations behind instance-based services/repositories (`*_service` / `*_repository`) exposing typed models (`fromJson`/`toJson`/`copyWith`) and throwing typed **`AppException`**.
-- **Centralized configuration:** Load all API URLs, database endpoints, and public keys strictly from centralized config/environment modules (`appConfig`, `.env*`) — **never** hardcode URLs, tokens, or credentials, and **never** ship admin/service-role keys in client code or repositories.
-- **Versioned migrations:** Track all database schema, index, trigger, and security policy (RLS/RBAC) changes in versioned migration files as a single source of truth shared across clients.
-- **Zero secret logging:** **NEVER** log auth tokens, passwords, OTPs, message/content plaintext, or private encryption keys.
-- **Production release signing:** Ship mobile release builds exclusively with configured release signing (`android/key.properties`, release certificates) — never debug signing.
+- Treat shipped clients and local caches as untrusted. Keep privileged secrets on trusted servers. Store client credentials with platform-appropriate secure storage or protected cookies where supported, and verify behavior on each supported target.
+- Minimize collected and stored sensitive data. Keep tokens, passwords, OTPs, private keys, and private payloads out of logs, analytics, and crash reports. Prefer structured event names and correlation IDs with redaction.
+- Use reviewed libraries and the project's established cryptographic protocol. For new encrypted formats, use authenticated encryption with correct nonce handling and versioned key and payload metadata. Preserve compatibility and plan rotation. Keep expensive batch work off the UI thread.
+- Store decrypted content in memory by default. Persist it only when explicitly required with an appropriate protection, expiry, and cleanup policy. Handle decryption or key restoration failures without silently deleting data or regenerating keys.
 
-### Service Pattern
+## Notifications
 
-```dart
-class FeatureService {
-  FeatureService(this._client);
-
-  final BackendClient _client;
-
-  Future<ResultModel> fetchItem(String id) async {
-    try {
-      final data = await _client.getById(id);
-      return ResultModel.fromJson(data);
-    } catch (e) {
-      throw AppException('Failed to fetch item: $e');
-    }
-  }
-}
-```
-
----
-
-## 2) Encryption & Background Offloading (Mandatory When Crypto Is Used)
-
-- **Single entrypoint:** Route all encrypt/decrypt operations through a unified **`cryptoService`** — never implement ad-hoc ciphers inside features.
-- **Key storage & guard:** Store key material in secure platform storage (`FlutterSecureStorage`, Keychain/Keystore, or scoped Web Crypto keys) guarded by **`EncryptionGuard`** — never bypass key guards.
-- **Offload heavy crypto:** Run heavy/batch cryptographic operations on background isolates (`EncryptionIsolateManager`) on mobile or **Web Workers** (`src/workers/`) on web — never block the UI thread.
-- **Modern cipher standard:** Use authenticated encryption (**AEAD `AES-256-GCM`**) for all new writes; keep legacy ciphers (e.g., `AES-CBC`) strictly decrypt-only for backward compatibility.
-- **Payload metadata:** Attach `version`, `algorithm`, and `iv/nonce` metadata alongside ciphertext so key rotation and protocol migrations remain seamless.
-
----
-
-## 3) Authoritative Stream / Realtime & Local Cache Sync (Mandatory)
-
-Route collection, feed, and chat timeline synchronization through centralized sync/reconciliation helpers:
-
-- **Single source of truth:** The **server snapshot is authoritative**; local persistence (SQLite, Drift, Hive, Isar, IndexedDB) is a read-through cache only. State lists update through deterministic reconciliation helpers (**replace/reconcile**, never open-ended append merges).
-- **Authoritative sync rules & forbidden anti-patterns:**
-  - **Never** yield local cache rows from a reactive stream *before* the first server snapshot arrives (use cache strictly to warm synchronous in-memory decrypt caches or initial non-blocking paint).
-  - **Never** treat an empty realtime event `[]` as "all items deleted" without verification; set `serverConfirmedEmpty: true` only after confirming an authoritative empty fetch.
-  - **Never** run open-ended array merges on stream batches.
-  - **Never** wipe an entire local table/store for a single item deletion — delete specifically by item ID.
-  - **Never** render records whose per-user soft-delete list (`deleted_by`) includes the current user ID.
-  - **Never** blindly purge all cached records falling outside the latest `50`/`100` pagination window — use targeted phantom-prune helpers.
-- **Delete semantics:** delete-for-everyone = authoritative server delete + local cache delete by ID; delete-for-me = append user ID to `deleted_by` + local cache delete by ID.
-- **Pending local privacy flags:** Hold pending local state toggles (e.g., hide/unhide, mute, archive) with a protection window before clearing so stale incoming stream batches cannot revert an active user action.
-- **No destructive auto-recovery:** Never silently regenerate conversation/encryption keys on decrypt/send failure (surface a clear restore-keys error instead), and never wipe local caches or auto re-key on OTA/patch startup.
-
----
-
-## 4) Conversation / Item Previews & Mark-as-Read Sync (Mandatory)
-
-### Source Priority for Latest Preview (`recentMessage` / Latest Activity)
-
-1. **Synchronous in-memory decrypted caches** (`messageDecryptTextCache` by ID and `expressionDecryptCache` for stickers/GIFs rendered in the active app language).
-2. **Live in-memory / realtime state** (`previous` snapshot) whenever `previous.sentAt >= server.sentAt` and `previous` holds valid plaintext while the incoming row still contains ciphertext or an unhydrated placeholder.
-3. **Local cache (SQLite / IndexedDB / Drift)** **only** when `cache.sentAt >= server.sentAt` (or matching item ID with an unhydrated server placeholder). **Never** allow an older cached row (`cache.sentAt < server.sentAt`) to overwrite a newer server or realtime preview.
-
-- Preview validity guards must reject both undecryptable error placeholders and raw encrypted payload strings (`isValidEncryptedFormat` / `isEncryptedMessage`).
-- **Mark-as-read hold window:** Clearing unread counts on open or tap must update in-memory state at **0ms synchronously** and activate a per-conversation hold window (e.g., ~8s) so concurrent or stale server fetches cannot resurrect cleared badges before the backend RPC/request commits.
-- **Tray-to-State live synchronization:** Notification tray `Mark as Read` and `Quick Reply` actions must immediately synchronize live in-memory state controllers whenever the application UI context is mounted.
-
----
-
-## 5) Zero N+1 Queries & Key / Lookup Cache Reuse (Mandatory)
-
-- **Resolve once per batch:** Never perform key unwrapping (e.g., RSA/ECDH unwrap) or per-row user/profile database queries inside message or feed rendering loops. Resolve the room/group key once before iterating and reuse an in-memory `senderId -> displayName` lookup cache.
-- **Single-entity targeted refresh:** Refreshing a single conversation, group, or item preview (`refreshSinglePreview(id)`) must query **only that target entity**, never re-fetch the entire list.
-- **Peek synchronous caches first:** Viewport item decryption/formatting must peek synchronous static/in-memory key and plaintext caches (`peekCachedKeysSync`, `peekCachedGroupKeySync`) *before* instantiating services or awaiting async lookups.
-
----
-
-## 6) Feed & List Cache
-
-- Sort deterministically (e.g., pinned items first, then authoritative server timestamp — never local `cached_at`).
-- Hydrate local cache for instant initial paint **without** blocking the network fetch (`fetchFeed` must never `await` local cache hydration before starting the remote request).
-- On screen visible: display cached items immediately while background refresh runs; render skeleton loaders only when no cached items exist (`Initial` state).
-- Cache frequently queried access/relationship sets (e.g., friend/member IDs) with a short TTL and parallelize independent reads.
-
----
-
-## 7) Speed-Critical Push Notifications & System Tray (Mandatory)
-
-### Tray Display
-
-- Render the local notification **immediately** — set `deferAvatarDownload: true` and update the notification avatar asynchronously on the same notification ID.
-- Resolve and decrypt the push payload in a **single pass** — never decrypt twice.
-- Dispatch delivery acknowledgments asynchronously (`unawaited`) so they never delay tray presentation.
-- Keep mute/hidden checks lean and execute before displaying the tray item.
-
-### Tray Actions
-
-- **Dismiss the tray notification first** (`cancelById`), then execute backend/DB work.
-- Reuse warm backend clients, local DB connections, and crypto isolates — skip re-initialization when already warm and skip key setup when keys are already loaded.
-- Skip payload decryption when payload is plaintext and routing IDs are already present.
-- Execute parallel mark-read requests (`Future.wait` / `Promise.all`) and clear local notification stores asynchronously (`unawaited`).
-- **Inline reply:** update local UI/tray optimistically, show result toast if applicable, and await the send completion inside the background handler so OS inline-reply spinners terminate cleanly.
-- **Deep-link navigation:** use a short bounded backoff (≤ ~600ms) if app context is initializing — never multi-second polling loops.
-
-### Complete Push Coverage & Notification Crypto
-
-- Every push notification category (chat, incoming call, social activity, system/admin) must ship with working tray actions (`reply`, `mark_read`, `mute`, `answer`/`decline`, `view`) and matching navigation routing in the **same change**.
-- Deliver data-only pushes where custom client decryption/actions are required.
-- Notification decryption must **soft-fail** to safe localized fallback copy — never block rendering or navigation on decrypt errors, and avoid full-table decrypt probes on every app startup.
-- **Realtime calls:** drive call timers from authoritative server timestamps (`connected_at` / `updated_at`) and subscribe with server-filtered realtime channels (`.eq()` / topic filter) — never subscribe to an entire table and filter in client memory.
-
-### Forbidden on Notification Hot Paths
-
-- Blocking tray display on avatar downloads, double-decrypting FCM/push payloads, awaiting mark-read before dismissing the tray, or re-initializing backend/crypto engines when already warm.
-
----
-
-## 8) App Lifecycle
-
-- Debounce realtime socket/channel disconnects briefly (~30s) when entering background so quick app switches stay warm.
-- On app resume: reconnect realtime channels immediately, trigger full data refresh **only** when backgrounded ≥ 30s or if realtime disconnected, and invoke active call/session recovery immediately when authenticated.
-
----
-
-## 9) Structured Logging & Release Smoke Checklist
-
-- Use **`appLog`** (or the repository's structured logger) exclusively — **never** raw `print`.
-- Use consistent step markers in debug logs: `🔍` entry, `⚡` network/DB I/O, `✅` success, `❌` failure (`appLog.e` + stackTrace).
-- UI `catch` blocks: log via `appLog.e` + optional `crashReporting.recordError` and surface localized user feedback — never empty `catch`.
-- Initialize `crashReporting` during app startup (guard platform-unsupported targets gracefully).
-
-```dart
-appLog.d('🔍 [FeatureService.load] Starting with id: $id', tag: 'Feature');
-appLog.d('⚡ [FeatureService.load] Querying backend...', tag: 'Feature');
-appLog.d('✅ [FeatureService.load] Completed', tag: 'Feature');
-```
-
-### Release Smoke Checklist (Before Shipping)
-
-- Auth flow, encrypted sync/chat, realtime calls, notification tray actions & deep links, and feed scroll.
-- Crash reporting verified, database access policies (RLS/RBAC) and storage rules applied, release signing configured, and OTA patch cache-safety verified.
+- Where supported, display promptly without waiting for decorative assets or duplicate processing. Use safe localized fallback copy and avoid leaking private content to lock screens.
+- Treat notification data and deep links as untrusted. Recheck session and authorization, deduplicate actions, and synchronize visible state after acknowledgment. Complete or fail OS action handlers promptly and verify routing from cold and warm starts.

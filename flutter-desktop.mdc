@@ -1,0 +1,14 @@
+---
+description: Use for Flutter on Windows, macOS, or Linux, including desktop plugins, native runners, OS integration, and packaging
+alwaysApply: false
+---
+
+# Flutter Desktop
+
+Apply [Flutter](flutter.mdc) and [Desktop UX](desktop-ux.mdc). Confirm the project's declared Windows, macOS, or Linux targets before changing runners or adding packages.
+
+- Use layout constraints for adaptive panes and navigation. Use Flutter focus traversal, `Shortcuts` and `Actions`, and suitable menu APIs to implement shared commands. Test text input, selection, and shortcuts on affected targets.
+- Before adding a plugin, check its target and architecture support, required system libraries, and runtime behavior in release mode. Keep platform services for windowing, credential storage, files, notifications, and deep links behind small adapters where behavior varies.
+- Retain native runner and build-system conventions. Declare macOS entitlements and platform permissions where needed. Use OS-provided data and cache locations and handle sandboxed paths and unavailable credential stores explicitly.
+- Test OAuth callback handling in installed builds when authentication uses deep links or loopback redirects. Verify registration, cancellation, duplicate callbacks, and session restoration per supported OS.
+- Run the affected `flutter build windows`, `flutter build macos`, or `flutter build linux` on compatible hosts or CI when platform changes warrant it. Verify install or launch, packaged assets and native dependencies, signing or notarization where required, and upgrade behavior if applicable.
